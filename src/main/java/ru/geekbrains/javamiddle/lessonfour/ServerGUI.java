@@ -12,8 +12,8 @@ public class ServerGUI extends JFrame implements ActionListener, Thread.Uncaught
     private static final int HEIGHT = 100;
 
     private final ChatServer server;
-    private final JButton btnStart = new JButton("Start");
-    private final JButton btnStop = new JButton("Stop");
+    private final JButton btnStart = new JButton("Запустить");
+    private final JButton btnStop = new JButton("Остановить");
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
@@ -23,7 +23,7 @@ public class ServerGUI extends JFrame implements ActionListener, Thread.Uncaught
             }
         });
 //        throw new RuntimeException("Main died!");
-        System.out.println("Main finished");
+        System.out.println("Main завершился");
     }
 
     ServerGUI() {
@@ -31,7 +31,7 @@ public class ServerGUI extends JFrame implements ActionListener, Thread.Uncaught
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setBounds(POS_X, POS_Y, WIDTH, HEIGHT);
         setResizable(false);
-        setTitle("Chat server");
+        setTitle("Чат-сервер");
         setAlwaysOnTop(true);
         setLayout(new GridLayout(1, 2));
         btnStart.addActionListener(this);
@@ -52,7 +52,7 @@ public class ServerGUI extends JFrame implements ActionListener, Thread.Uncaught
 //            server.stop();
             throw new RuntimeException("Hello from EDT!");
         } else {
-            throw new RuntimeException("Unknown source:" + src);
+            throw new RuntimeException("Неизвестный источник:" + src);
         }
     }
 
@@ -61,9 +61,9 @@ public class ServerGUI extends JFrame implements ActionListener, Thread.Uncaught
         e.printStackTrace();
         String msg;
         StackTraceElement[] ste = e.getStackTrace();
-        msg = String.format("Exception in \"%s\" %s: %s\n\tat %s",
+        msg = String.format("Исключение в \"%s\" %s: %s\n\tв %s",
                 t.getName(), e.getClass().getCanonicalName(), e.getMessage(), ste[0]);
-        JOptionPane.showMessageDialog(this, msg, "Exception", JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(this, msg, "Исключение", JOptionPane.ERROR_MESSAGE);
         System.exit(1);
     }
 }
