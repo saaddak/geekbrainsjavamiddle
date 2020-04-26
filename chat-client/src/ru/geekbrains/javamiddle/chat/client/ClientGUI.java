@@ -1,5 +1,6 @@
 package ru.geekbrains.javamiddle.chat.client;
 
+import ru.geekbrains.javamiddle.chat.common.Library;
 import ru.geekbrains.javamiddle.network.SocketThread;
 import ru.geekbrains.javamiddle.network.SocketThreadListener;
 
@@ -10,30 +11,33 @@ import java.awt.event.ActionListener;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.regex.Pattern;
 
 public class ClientGUI extends JFrame implements ActionListener, Thread.UncaughtExceptionHandler, SocketThreadListener {
 
-    private static final int WIDTH = 800;
-    private static final int HEIGHT = 400;
+    private static final int WIDTH = 400;
+    private static final int HEIGHT = 300;
 
     private final JTextArea log = new JTextArea();
     private final JPanel panelTop = new JPanel(new GridLayout(2, 3));
     private final JTextField tfIPAddress = new JTextField("127.0.0.1");
     private final JTextField tfPort = new JTextField("8189");
-    private final JCheckBox cbAlwaysOnTop = new JCheckBox("Поверх других окон", true);
-    private final JTextField tfLogin = new JTextField("vasisualiy");
+    private final JCheckBox cbAlwaysOnTop = new JCheckBox("Always on top", true);
+    private final JTextField tfLogin = new JTextField("ivan");
     private final JPasswordField tfPassword = new JPasswordField("123");
-    private final JButton btnLogin = new JButton("Войти");
+    private final JButton btnLogin = new JButton("Login");
 
     private final JPanel panelBottom = new JPanel(new BorderLayout());
-    private final JButton btnDisconnect = new JButton("<html><b>Выйти</b></html>");
+    private final JButton btnDisconnect = new JButton("<html><b>Disconnect</b></html>");
     private final JTextField tfMessage = new JTextField();
-    private final JButton btnSend = new JButton("Отправить");
+    private final JButton btnSend = new JButton("Send");
 
     private final JList<String> userList = new JList<>();
     private boolean shownIoErrors = false;
     private SocketThread socketThread;
-    private Socket socket;
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
@@ -50,13 +54,12 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         setLocationRelativeTo(null);
         setSize(WIDTH, HEIGHT);
         setAlwaysOnTop(true);
-        setTitle("Чат-клиент");
-        userList.setListData(new String[]{"first-good-user", "second-bad-user", "third-ugly-user", "fourth-strange-user",
-                "fifth-lazy-user", "sixth-self-reproach-user", "seventh-happy-user", "eighth-rude-user", "vasya-pupkin",
-                "pablo-diego-jose-francisco-de-paula-juan-nepomuceno-maria-de-los-remedios-cipriano-de-la-santisima-trinidad-ruiz-y-picasso"});
+        userList.setListData(new String[]{"user1", "user2", "user3", "user4",
+                "user5", "user6", "user7", "user8", "user9",
+                "user-with-exceptionally-long-name-in-this-chat"});
         JScrollPane scrUser = new JScrollPane(userList);
         JScrollPane scrLog = new JScrollPane(log);
-        scrUser.setPreferredSize(new Dimension(150, 0));
+        scrUser.setPreferredSize(new Dimension(100, 0));
         log.setLineWrap(true);
         log.setWrapStyleWord(true);
         log.setEditable(false);
@@ -75,10 +78,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         panelBottom.add(btnDisconnect, BorderLayout.WEST);
         panelBottom.add(tfMessage, BorderLayout.CENTER);
         panelBottom.add(btnSend, BorderLayout.EAST);
-
-        btnDisconnect.setEnabled(false);
-        btnSend.setEnabled(false);
-        tfMessage.setEnabled(false);
+        panelBottom.setVisible(false);
 
         add(scrUser, BorderLayout.EAST);
         add(scrLog, BorderLayout.CENTER);
@@ -97,41 +97,18 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         } else if (src == btnLogin) {
             connect();
         } else if (src == btnDisconnect) {
-            disconnect();
+            socketThread.close();
         } else {
-            throw new RuntimeException("Неизвестный источник:" + src);
+            throw new RuntimeException("Unknown source:" + src);
         }
     }
 
     private void connect() {
         try {
-            socket = new Socket(tfIPAddress.getText(), Integer.parseInt(tfPort.getText()));
+            Socket socket = new Socket(tfIPAddress.getText(), Integer.parseInt(tfPort.getText()));
             socketThread = new SocketThread(this, "Client", socket);
-            btnDisconnect.setEnabled(true);
-            tfLogin.setEnabled(false);
-            tfPassword.setEnabled(false);
-            tfIPAddress.setEnabled(false);
-            tfPort.setEnabled(false);
-            btnLogin.setEnabled(false);
-            btnSend.setEnabled(true);
-            tfMessage.setEnabled(true);
         } catch (IOException e) {
             showException(Thread.currentThread(), e);
-        }
-    }
-
-    private void disconnect() {
-        if(socketThread.isAlive()) {
-            socketThread.interrupt();
-            btnDisconnect.setEnabled(false);
-            tfLogin.setEnabled(true);
-            tfPassword.setEnabled(true);
-            tfIPAddress.setEnabled(true);
-            tfPort.setEnabled(true);
-            btnLogin.setEnabled(true);
-            btnSend.setEnabled(false);
-            tfMessage.setEnabled(false);
-            putLog("Сеанс связи завершён.");
         }
     }
 
@@ -176,6 +153,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
             msg = String.format("Exception in \"%s\" %s: %s\n\tat %s",
                     t.getName(), e.getClass().getCanonicalName(), e.getMessage(), ste[0]);
             JOptionPane.showMessageDialog(this, msg, "Exception", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
         }
     }
 
@@ -192,26 +170,61 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
 
     @Override
     public void onSocketStart(SocketThread thread, Socket socket) {
-        putLog("Канал связи открыт.");
+        putLog("Start");
     }
 
     @Override
     public void onSocketStop(SocketThread thread) {
-        putLog("Канал связи закрыт.");
+        putLog("Stop");
+        panelBottom.setVisible(false);
+        panelTop.setVisible(true);
     }
 
     @Override
     public void onSocketReady(SocketThread thread, Socket socket) {
-        putLog("Канал связи готов.");
+        putLog("Ready");
+        panelBottom.setVisible(true);
+        panelTop.setVisible(false);
+        String login = tfLogin.getText();
+        String password = new String(tfPassword.getPassword());
+        thread.sendMessage(Library.getAuthRequest(login, password));
+
+        //thread.sendMessage(parseRequest(Library.getAuthRequest(login, password)));
     }
 
     @Override
     public void onReceiveString(SocketThread thread, Socket socket, String msg) {
-        putLog(msg);
+        //putLog(msg);
+        putLog(parseRequest(msg));
     }
 
     @Override
     public void onSocketException(SocketThread thread, Throwable throwable) {
         showException(thread, throwable);
+    }
+
+    private String parseRequest(String sourceRequest) {
+        Pattern requestRegex = Pattern.compile("±");
+        String[] parsedArray = requestRegex.split(sourceRequest);
+        try {
+            switch (parsedArray[0]) {
+                case "/auth_request":
+                    return "!> запрос идентификации от пользователя " + parsedArray[1] + " с паролем " + parsedArray[2];
+                case "/auth_accept":
+                    return "!> идентификация пройдена для пользователя " + parsedArray[1];
+                case "/auth_denied":
+                    return "!> в доступе отказано";
+                case "/msg_format_error":
+                    return "!> возникла ошибка: " + parsedArray[1];
+                case "/broadcast":
+                    Date currentDate = new Date(Long.parseLong(parsedArray[1]));
+                    return "> подключение состоялось в " + currentDate + " к серверу " + parsedArray[2] + " с сообщением " + parsedArray[3];
+                default:
+                    return sourceRequest;
+            }
+        } catch (IndexOutOfBoundsException e) {
+            onSocketException(socketThread, e);
+        }
+        return "!> неизвестное действие пользователя";
     }
 }

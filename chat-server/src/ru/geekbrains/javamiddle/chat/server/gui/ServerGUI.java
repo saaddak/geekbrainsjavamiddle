@@ -1,45 +1,53 @@
 package ru.geekbrains.javamiddle.chat.server.gui;
 
 import ru.geekbrains.javamiddle.chat.server.core.ChatServer;
+import ru.geekbrains.javamiddle.chat.server.core.ChatServerListener;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-public class ServerGUI extends JFrame implements ActionListener, Thread.UncaughtExceptionHandler {
-    private static final int POS_X = 1000;
-    private static final int POS_Y = 550;
-    private static final int WIDTH = 200;
-    private static final int HEIGHT = 100;
+public class ServerGUI extends JFrame implements ActionListener, Thread.UncaughtExceptionHandler, ChatServerListener {
 
-    private final ChatServer server;
-    private final JButton btnStart = new JButton("Старт");
-    private final JButton btnStop = new JButton("Стоп");
+    private static final int POS_X = 800;
+    private static final int POS_Y = 200;
+    private static final int WIDTH = 600;
+    private static final int HEIGHT = 300;
+
+    private final ChatServer chatServer = new ChatServer(this);
+    private final JButton btnStart = new JButton("Start");
+    private final JButton btnStop = new JButton("Stop");
+    private final JPanel panelTop = new JPanel(new GridLayout(1, 2));
+    private final JTextArea log = new JTextArea();
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
-            public void run() {
+            public void run() { // Event Dispatching Thread
                 new ServerGUI();
             }
         });
     }
 
-    ServerGUI() {
+    private ServerGUI() {
         Thread.setDefaultUncaughtExceptionHandler(this);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setBounds(POS_X, POS_Y, WIDTH, HEIGHT);
         setResizable(false);
-        setTitle("Чат-сервер");
+        setTitle("Chat server");
         setAlwaysOnTop(true);
-        setLayout(new GridLayout(1, 2));
+        log.setEditable(false);
+        log.setLineWrap(true);
+        JScrollPane scrollLog = new JScrollPane(log);
         btnStart.addActionListener(this);
         btnStop.addActionListener(this);
 
-        add(btnStart);
-        add(btnStop);
-        server = new ChatServer();
+        panelTop.add(btnStart);
+        panelTop.add(btnStop);
+        add(panelTop, BorderLayout.NORTH);
+        add(scrollLog, BorderLayout.CENTER);
+
         setVisible(true);
     }
 
@@ -47,11 +55,12 @@ public class ServerGUI extends JFrame implements ActionListener, Thread.Uncaught
     public void actionPerformed(ActionEvent e) {
         Object src = e.getSource();
         if (src == btnStart) {
-            server.start(8189);
+            chatServer.start(8189);
         } else if (src == btnStop) {
-            server.stop();
+//            throw new RuntimeException("Hello from EDT");
+            chatServer.stop();
         } else {
-            throw new RuntimeException("Неизвестный источник:" + src);
+            throw new RuntimeException("Unknown source: " + src);
         }
     }
 
@@ -64,6 +73,14 @@ public class ServerGUI extends JFrame implements ActionListener, Thread.Uncaught
                 t.getName(), e.getClass().getCanonicalName(), e.getMessage(), ste[0]);
         JOptionPane.showMessageDialog(this, msg, "Exception", JOptionPane.ERROR_MESSAGE);
         System.exit(1);
+    }
+
+    @Override
+    public void onChatServerMessage(String msg) {
+        SwingUtilities.invokeLater(() -> {
+            log.append(msg + "\n");
+            log.setCaretPosition(log.getDocument().getLength());
+        });
     }
 }
 
