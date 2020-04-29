@@ -19,6 +19,9 @@ public class Server extends Application {
         primaryStage.setScene(new Scene(root, 600, 300));
         primaryStage.setAlwaysOnTop(true);
         primaryStage.show();
+        primaryStage.setOnCloseRequest(event -> {
+            primaryStage.close();
+            System.exit(0);
+        });
     }
 }
-
